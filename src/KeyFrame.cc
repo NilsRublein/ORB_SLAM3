@@ -59,7 +59,7 @@ KeyFrame::KeyFrame(Frame &F, Map *pMap, KeyFrameDatabase *pKFDB):
     mbToBeErased(false), mbBad(false), mHalfBaseline(F.mb/2), mpMap(pMap), mbCurrentPlaceRecognition(false), mNameFile(F.mNameFile), mnMergeCorrectedForKF(0),
     mpCamera(F.mpCamera), mpCamera2(F.mpCamera2),
     mvLeftToRightMatch(F.mvLeftToRightMatch),mvRightToLeftMatch(F.mvRightToLeftMatch), mTlr(F.GetRelativePoseTlr()),
-    mvKeysRight(F.mvKeysRight), NLeft(F.Nleft), NRight(F.Nright), mTrl(F.GetRelativePoseTrl()), mnNumberOfOpt(0), mbHasVelocity(false)
+    mvKeysRight(F.mvKeysRight), NLeft(F.Nleft), NRight(F.Nright), mTrl(F.GetRelativePoseTrl()), mnNumberOfOpt(0), mbHasVelocity(false), mpPointClouds(new PointCloud())
 {
     mnId=nNextId++;
 
@@ -93,6 +93,29 @@ KeyFrame::KeyFrame(Frame &F, Map *pMap, KeyFrameDatabase *pKFDB):
     SetPose(F.GetPose());
 
     mnOriginMapId = pMap->GetId();
+
+
+    // @TODO: Make this a function; parameterize depth filter values and resolution ...
+    // @TODO: Why do I receive NaN values for some of the depth values? Handle NaN values here instead of in FrameDrawer.cc!
+    // Create Point cloud based on depth mask and camera intrinsic parameters
+    for ( int m=0; m<F.mImDepth.rows; m+=3 )
+    {
+        for ( int n=0; n<F.mImDepth.cols; n+=3 )
+        {
+            float d = F.mImDepth.ptr<float>(m)[n];
+            if(d < 0.2 || d > 8)
+                continue;
+            PointT p;
+            p.x = (n - cx) * d * invfx;
+            p.y = (m - cy) * d * invfy;
+            p.z = d;
+            p.b = F.mImRGB.ptr<uchar>(m)[n*3];
+            p.g = F.mImRGB.ptr<uchar>(m)[n*3+1];
+            p.r = F.mImRGB.ptr<uchar>(m)[n*3+2];
+            mpPointClouds->points.push_back(p);
+        }
+    }
+    //viewer.showCloud( mpPointClouds );
 }
 
 void KeyFrame::ComputeBoW()

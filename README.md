@@ -2,12 +2,9 @@
 
 ### Modifications for dense mapping
 
-This is the start of a fork for to generate dense maps based on ORB-SLAM3.
+This is the start of a fork for to generate dense maps based on ORB-SLAM3 based on [ORB-SLAM3-Dense](https://github.com/fishmarch/ORB-SLAM3-Dense)
 
-@TODO: Implement dense thread, based on
-* Repositories
-  * [ORB-SLAM2-Dense](https://github.com/bikong2/ORB_SLAM2_dense)
-  * [ORB-SLAM3-Dense](https://github.com/fishmarch/ORB-SLAM3-Dense)
+TODO: add filtering
 * Papers
   * [Dense Reconstruction from Visual SLAM with Probabilistic Multi-Sequence Merging (2022)](https://ieeexplore.ieee.org/document/9918256)
   * [Real-Time Tracking and 3D Dense Reconstruction Based on ORB-SLAM3 Extensions Using a Depth Camera (2023)](https://www.researchgate.net/publication/374156914_Real-Time_Tracking_and_3D_Dense_Reconstruction_Based_on_ORB-SLAM3_Extensions_Using_a_Depth_Camera)

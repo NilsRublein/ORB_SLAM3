@@ -28,6 +28,14 @@
 
 #include<mutex>
 
+// Used for dense mapping
+#include "Converter.h"
+#include <pcl/common/transforms.h>
+#include <pcl/point_types.h>
+#include <pcl/filters/voxel_grid.h>
+#include <pcl/visualization/cloud_viewer.h>
+
+
 namespace ORB_SLAM3
 {
 
@@ -36,6 +44,9 @@ class Settings;
 class MapDrawer
 {
 public:
+    typedef pcl::PointXYZRGB PointT;
+    typedef pcl::PointCloud <PointT> PointCloud;
+
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
     MapDrawer(Atlas* pAtlas, const string &strSettingPath, Settings* settings);
 
@@ -49,6 +60,7 @@ public:
     void SetCurrentCameraPose(const Sophus::SE3f &Tcw);
     void SetReferenceKeyFrame(KeyFrame *pKF);
     void GetCurrentOpenGLCameraMatrix(pangolin::OpenGlMatrix &M, pangolin::OpenGlMatrix &MOw);
+    void DrawMapDensePoints();
 
 private:
 
@@ -64,6 +76,7 @@ private:
     Sophus::SE3f mCameraPose;
 
     std::mutex mMutexCamera;
+    std::mutex mMutexTest;
 
     float mfFrameColors[6][3] = {{0.0f, 0.0f, 1.0f},
                                 {0.8f, 0.4f, 1.0f},

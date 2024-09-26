@@ -281,7 +281,7 @@ void LoopClosing::Run()
 
                         mnNumCorrection += 1;
                     }
-
+                    
                     // Reset all variables
                     mpLoopLastCurrentKF->SetErase();
                     mpLoopMatchedKF->SetErase();

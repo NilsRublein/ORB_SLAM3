@@ -22,6 +22,10 @@
 #include <pangolin/pangolin.h>
 #include <mutex>
 
+#include <exception> 
+#include <iostream>   
+#include <pcl/filters/extract_indices.h>
+
 namespace ORB_SLAM3
 {
 
@@ -464,4 +468,97 @@ void MapDrawer::GetCurrentOpenGLCameraMatrix(pangolin::OpenGlMatrix &M, pangolin
     MOw.m[13] = Twc(1,3);
     MOw.m[14] = Twc(2,3);
 }
+
+/*
+    Note:
+    * We can see NaN values in the depth map based created point cloud. This is not caused by the depth filtering done when creating the point cloud (see Keyframe.cc) because we can see the RGB values where as the position values are NaN. 
+    * We manually remove the NaNs as removeNaNFromPointCloud() seems to crash and break everything. Probably best to remove the NaN values at the source -> Point cloud creation in Keyframe.cc.
+*/
+void MapDrawer::DrawMapDensePoints()
+{
+    // Get Keyframes from active map
+    Map* pActiveMap = mpAtlas->GetCurrentMap();
+    if(!pActiveMap)
+        return;
+    const vector<KeyFrame*> vpKFs = pActiveMap->GetAllKeyFrames();
+    if (vpKFs.empty())
+        return;
+    // std::cerr << "vpKFs size: " << vpKFs.size() << std::endl;
+
+    PointCloud::Ptr allCloudPoints(new PointCloud);
+
+    // unique_lock<mutex> lock(mMutexTest);
+    for(size_t i=0; i<vpKFs.size(); i++)
+    {
+        KeyFrame* pKF = vpKFs[i];
+
+        // Not sure if this one is needed.
+        if (pKF->isBad())
+        {
+            std::cerr << "Bad KF!" << std::endl;
+            continue;
+        }
+
+        if (!pKF->mpPointClouds || pKF->mpPointClouds->points.empty()) {
+            std::cerr << "mpPointClouds is null or empty" << std::endl;
+            continue; 
+        }
+
+        
+        PointCloud::Ptr cloud(new PointCloud);
+
+        // Print every point
+        /*
+        for (const auto& point : pKF->mpPointClouds->points) {
+            std::cout << "X: " << point.x << " Y: " << point.y << " Z: " << point.z 
+                    << " R: " << static_cast<int>(point.r)
+                    << " G: " << static_cast<int>(point.g)
+                    << " B: " << static_cast<int>(point.b) << std::endl;
+        }
+        std::cerr << "End!" << std::endl;
+        */
+
+        // Remove NaN values, transformPointCloud will not work otherwise ...
+        pKF->mpPointClouds->is_dense = false;
+
+        //std::vector<int> index;
+        //pcl::removeNaNFromPointCloud(*pKF->mpPointClouds, *filtered_cloud, index); // This breaks everything if there are NaN values inside the cloud, even if is_dense is set to False!
+
+        // Manually filter out NaN values from the input point cloud -> This does not break!
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr filtered_cloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+        for (const auto& point : pKF->mpPointClouds->points) {
+            if (std::isfinite(point.x) && std::isfinite(point.y) && std::isfinite(point.z)) {
+                filtered_cloud->points.push_back(point);  // Add valid points to the new cloud
+            }
+        }
+
+        filtered_cloud->width = filtered_cloud->points.size();
+        filtered_cloud->height = 1;         // Unorganized cloud
+        filtered_cloud->is_dense = true;    // After filtering, the cloud is now dense
+        //std::cout << "no. of pts in input=" << pKF->mpPointClouds->size() << std::endl;
+        //std::cout << "no. of pts in output="<< filtered_cloud->size() << std::endl;
+
+        // Transform pose of point cloud and add to all point clouds
+        Eigen::Isometry3d T = ORB_SLAM3::Converter::toSE3Quat(pKF->GetPose());
+        pcl::transformPointCloud(*filtered_cloud, *cloud, T.inverse().matrix());
+        *allCloudPoints += *cloud;
+    }
+
+    pcl::VoxelGrid<PointT>  voxel;
+    //voxel.setLeafSize( 0.03, 0.03, 0.03);
+    //PointCloud::Ptr results(new PointCloud());
+    //voxel.setInputCloud(allCloudPoints);
+    //voxel.filter(*results);
+    glPointSize(mPointSize);
+    glBegin(GL_POINTS);
+    for(auto p : allCloudPoints->points){
+        float r = p.r;
+        float g = p.g;
+        float b = p.b;
+        glColor3f(r/255, g/255, b/255);
+        glVertex3f(p.x, p.y, p.z);
+    }
+    glEnd();
+}
+
 } //namespace ORB_SLAM
