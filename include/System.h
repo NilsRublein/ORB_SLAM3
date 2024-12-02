@@ -171,6 +171,10 @@ public:
     // SaveMap(const string &filename);
     // LoadMap(const string &filename);
 
+    // From https://github.com/UZ-SLAMLab/ORB_SLAM3/issues/390#issuecomment-2420734040
+    // Saves Pointcloud with a .ply format
+    void SavePointCloud(const string &filename);
+
     // Information from most recent processed frame
     // You can call this right after TrackMonocular (or stereo or RGBD)
     int GetTrackingState();
