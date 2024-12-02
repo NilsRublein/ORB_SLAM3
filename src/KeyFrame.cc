@@ -95,27 +95,7 @@ KeyFrame::KeyFrame(Frame &F, Map *pMap, KeyFrameDatabase *pKFDB):
     mnOriginMapId = pMap->GetId();
 
 
-    // @TODO: Make this a function; parameterize depth filter values and resolution ...
-    // @TODO: Why do I receive NaN values for some of the depth values? Handle NaN values here instead of in FrameDrawer.cc!
-    // Create Point cloud based on depth mask and camera intrinsic parameters
-    for ( int m=0; m<F.mImDepth.rows; m+=3 )
-    {
-        for ( int n=0; n<F.mImDepth.cols; n+=3 )
-        {
-            float d = F.mImDepth.ptr<float>(m)[n];
-            if(d < 0.2 || d > 8)
-                continue;
-            PointT p;
-            p.x = (n - cx) * d * invfx;
-            p.y = (m - cy) * d * invfy;
-            p.z = d;
-            p.b = F.mImRGB.ptr<uchar>(m)[n*3];
-            p.g = F.mImRGB.ptr<uchar>(m)[n*3+1];
-            p.r = F.mImRGB.ptr<uchar>(m)[n*3+2];
-            mpPointClouds->points.push_back(p);
-        }
-    }
-    //viewer.showCloud( mpPointClouds );
+    CreateDensePointcloud(F);
 }
 
 void KeyFrame::ComputeBoW()
@@ -1177,6 +1157,45 @@ void KeyFrame::SetORBVocabulary(ORBVocabulary* pORBVoc)
 void KeyFrame::SetKeyFrameDatabase(KeyFrameDatabase* pKFDB)
 {
     mpKeyFrameDB = pKFDB;
+}
+
+
+void KeyFrame::CreateDensePointcloud(Frame F){
+    // @TODO: Make this a function; parameterize depth filter values and resolution ...
+    // @TODO: Why do I receive NaN values for some of the depth values? Handle NaN values here instead of in FrameDrawer.cc!
+    // Create Point cloud based on depth mask and camera intrinsic parameters. +3 is essentially downsampling the cloud by a factor of 3. -> We could make it even more dense (if it doesn't affect performance too much)
+    for ( int m=0; m<F.mImDepth.rows; m+=3 )
+    {
+        for ( int n=0; n<F.mImDepth.cols; n+=3 )
+        {
+            float d = F.mImDepth.ptr<float>(m)[n];
+
+            // Skip this point if it is not finit or outside of a certain range
+            if(!std::isfinite(d) || d < 0.2 || d > 8)
+                continue;
+            PointT p;
+            p.x = (n - cx) * d * invfx;
+            p.y = (m - cy) * d * invfy;
+            p.z = d;
+            p.b = F.mImRGB.ptr<uchar>(m)[n*3];
+            p.g = F.mImRGB.ptr<uchar>(m)[n*3+1];
+            p.r = F.mImRGB.ptr<uchar>(m)[n*3+2];
+
+            mpPointClouds->points.push_back(p);
+        }
+    }
+
+    // Set rest of point cloud variables
+    if (!mpPointClouds->points.empty()) 
+    {
+        // https://pointclouds.org/documentation/tutorials/basic_structures.html
+        // Ideally, we should both set width and height to their respective numbers and create an organized pcl.
+
+        mpPointClouds->width = mpPointClouds->points.size(); // Without this, transformPointCloud() breaks!
+        //mpPointClouds->is_dense = true;
+        //mpPointClouds->height = 1;  
+    }
+
 }
 
 } //namespace ORB_SLAM

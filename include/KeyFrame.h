@@ -314,6 +314,8 @@ public:
     bool bImu;
 
     // Dense pointclouds
+    /*Create Dense pointcloud based on camera intrinsic parameters and depth map.*/
+    void CreateDensePointcloud(Frame F);
     PointCloud::Ptr mpPointClouds;
 
     // The following variables are accesed from only 1 thread or never change (no mutex needed).
